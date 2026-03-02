@@ -722,3 +722,4 @@ tests/__pycache__/test_analysis.cpython-313-pytest-9.0.2.pyc
 tests/__pycache__/test_data_clients.cpython-313-pytest-9.0.2.pyc
 tests/__pycache__/test_full_system.cpython-313-pytest-9.0.2.pyc
 tests/__pycache__/test_utils.cpython-313-pytest-9.0.2.pyc
+node_modules

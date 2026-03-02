@@ -21,91 +21,35 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="analyze_forex_session",
             description=(
-                "Analyze forex session volatility and generate trading guidance. "
-                "Provides expected deviation, confidence score, market drivers, "
-                "and agent-specific trading recommendations based on historical "
-                "pattern matching and current market conditions."
+                "Analyze forex session volatility and generate trading guidance for a given currency pair. "
+                "Provides expected deviation in pips, a confidence score (0-1), market drivers, "
+                "historical pattern context, and agent-specific trading recommendations based on "
+                "historical pattern matching and current market conditions. "
+                "Returns a JSON object with fields: pair (string), session (string), "
+                "time_window_minutes (integer), volatility_expectation (Low/Medium/High/None), "
+                "expected_deviation_pips (number), confidence (0-1 number), "
+                "drivers (array of strings), historical_context (object with "
+                "similar_conditions_occurrences and expansion_rate), and agent_guidance (string). "
+                "On weekends, returns session='Market Closed' with volatility_expectation='None'. "
+                "Supported pairs: EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, USD/CAD, NZD/USD, "
+                "EUR/GBP, EUR/JPY, GBP/JPY and other major/minor pairs."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "pair": {
                         "type": "string",
-                        "description": "Currency pair to analyze (e.g., 'EUR/USD', 'GBP/USD', 'USD/JPY').",
+                        "description": "Currency pair to analyze. Use slash-separated format e.g. 'EUR/USD', 'GBP/USD', 'USD/JPY', 'GBP/JPY', 'AUD/USD'.",
                         "examples": ["EUR/USD", "GBP/JPY", "AUD/USD"]
                     },
                     "target_session": {
                         "type": "string",
-                        "description": "Trading session: 'asian', 'london', 'ny', or 'auto'.",
+                        "description": "Trading session to analyze. Use 'asian' for Asian session (00:00-09:00 UTC), 'london' for London session (08:00-16:00 UTC), 'ny' for New York session (13:00-21:00 UTC), or 'auto' to automatically detect the current or next upcoming session.",
                         "enum": ["asian", "london", "ny", "auto"],
                         "default": "auto"
                     }
                 },
                 "required": ["pair"]
-            },
-            outputSchema={
-                "type": "object",
-                "properties": {
-                    "pair": {
-                        "type": "string",
-                        "description": "Currency pair analyzed (e.g., 'EUR/USD')"
-                    },
-                    "session": {
-                        "type": "string",
-                        "description": "Trading session analyzed (e.g., 'London', 'Asian', 'NY', or 'Market Closed')"
-                    },
-                    "time_window_minutes": {
-                        "type": "integer",
-                        "description": "Analysis time window in minutes (pre-session analysis window)"
-                    },
-                    "volatility_expectation": {
-                        "type": "string",
-                        "enum": ["Low", "Medium", "High", "None"],
-                        "description": "Expected volatility level: 'Low', 'Medium', 'High', or 'None' (for weekends)"
-                    },
-                    "expected_deviation_pips": {
-                        "type": "number",
-                        "description": "Expected price deviation in pips for the session"
-                    },
-                    "confidence": {
-                        "type": "number",
-                        "description": "Confidence score (0-1) indicating reliability of the prediction"
-                    },
-                    "drivers": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of market drivers explaining the analysis"
-                    },
-                    "historical_context": {
-                        "type": "object",
-                        "properties": {
-                            "similar_conditions_occurrences": {
-                                "type": "integer",
-                                "description": "Number of historically similar conditions found"
-                            },
-                            "expansion_rate": {
-                                "type": "number",
-                                "description": "Historical expansion rate (0-1) indicating likelihood of volatility expansion"
-                            }
-                        },
-                        "description": "Historical pattern matching context"
-                    },
-                    "agent_guidance": {
-                        "type": "string",
-                        "description": "Trading strategy recommendation based on the analysis"
-                    }
-                },
-                "required": [
-                    "pair",
-                    "session",
-                    "time_window_minutes",
-                    "volatility_expectation",
-                    "expected_deviation_pips",
-                    "confidence",
-                    "drivers",
-                    "historical_context",
-                    "agent_guidance"
-                ]
             }
         )
     ]
@@ -125,7 +69,12 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         result = analyze_forex_session(pair, target_session)
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
     except Exception as e:
-        error_response = {"error": str(e), "pair": pair, "target_session": target_session}
+        error_response = {
+            "success": False,
+            "error": str(e),
+            "pair": pair,
+            "target_session": target_session
+        }
         return [TextContent(type="text", text=json.dumps(error_response, indent=2))]
 
 
