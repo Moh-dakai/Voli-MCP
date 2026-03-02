@@ -80,29 +80,65 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(type="text", text=json.dumps(error_response, indent=2))]
 
 
-# SSE transport — mount path must match the messages POST endpoint path
+# SSE transport
 sse = SseServerTransport("/messages")
+
 
 async def handle_sse(request: Request) -> Response:
     """
-    SSE endpoint — keeps the connection open for the full MCP session,
-    then returns an empty Response when the session ends so Starlette
-    doesn't crash trying to call None as an ASGI app.
+    SSE endpoint — keeps the long-lived connection open for the full MCP session.
+    Returns an empty Response() after the session ends so Starlette doesn't crash
+    trying to call the None return value as an ASGI app.
     """
     async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
         await app.run(streams[0], streams[1], app.create_initialization_options())
-    return Response()  # <-- required: Starlette calls handler's return value as ASGI app
+    return Response()
+
+
+async def handle_messages(request: Request) -> Response:
+    """
+    ASGI-to-Starlette adapter for sse.handle_post_message.
+
+    Problem: sse.handle_post_message(scope, receive, send) is a raw ASGI callable.
+    Starlette Route endpoints receive a single Request argument and must return a
+    Response. Passing sse.handle_post_message directly as an endpoint causes:
+        TypeError: handle_post_message() missing 2 required positional arguments:
+        'receive' and 'send'
+
+    Solution: intercept the raw ASGI send() calls that handle_post_message makes
+    internally, capture the status/headers/body it tries to send, then return those
+    as a proper Starlette Response so Starlette can send it through its normal flow.
+    This avoids double-sending and keeps everything compatible.
+    """
+    captured_status = 202
+    captured_headers: dict[str, str] = {}
+    captured_body = b""
+
+    async def capturing_send(message: dict) -> None:
+        nonlocal captured_status, captured_headers, captured_body
+        if message["type"] == "http.response.start":
+            captured_status = message.get("status", 202)
+            # ASGI headers are list of [bytes, bytes] pairs
+            captured_headers = {
+                k.decode("latin-1"): v.decode("latin-1")
+                for k, v in message.get("headers", [])
+            }
+        elif message["type"] == "http.response.body":
+            captured_body = message.get("body", b"")
+
+    await sse.handle_post_message(request.scope, request.receive, capturing_send)
+    return Response(
+        content=captured_body,
+        status_code=captured_status,
+        headers=captured_headers,
+    )
 
 
 # Starlette web app
-# NOTE: pass sse.handle_post_message directly as the endpoint — it IS a proper
-# Starlette-compatible async handler that returns a Response (202 Accepted).
-# Wrapping it in another function that returns None causes:
-#   TypeError: 'NoneType' object is not callable
 web_app = Starlette(
     routes=[
         Route("/sse", endpoint=handle_sse),
-        Route("/messages", endpoint=sse.handle_post_message, methods=["POST"]),
+        Route("/messages", endpoint=handle_messages, methods=["POST"]),
     ]
 )
 
