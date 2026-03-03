@@ -6,7 +6,7 @@ import json
 from typing import Any
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
-from mcp.types import Tool, TextContent
+from mcp.types import Tool, TextContent, CallToolResult
 from tools.session_analyzer import analyze_forex_session
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -119,12 +119,12 @@ async def call_tool(name: str, arguments: Any):
 
     try:
         result = await analyze_forex_session(pair, target_session)
-        # Return both TextContent (for legacy clients) and structuredContent
-        # structuredContent is required by the Context Protocol for query-eligible tools
-        return {
-            "content": [TextContent(type="text", text=json.dumps(result, indent=2))],
-            "structuredContent": result,
-        }
+        # Return TextContent for legacy clients AND structuredContent for Context Protocol
+        return CallToolResult(
+            content=[TextContent(type="text", text=json.dumps(result, indent=2))],
+            structuredContent=result,
+            isError=False,
+        )
     except Exception as e:
         error_response = {
             "success": False,
@@ -132,10 +132,11 @@ async def call_tool(name: str, arguments: Any):
             "pair": pair,
             "target_session": target_session
         }
-        return {
-            "content": [TextContent(type="text", text=json.dumps(error_response, indent=2))],
-            "structuredContent": error_response,
-        }
+        return CallToolResult(
+            content=[TextContent(type="text", text=json.dumps(error_response, indent=2))],
+            structuredContent=error_response,
+            isError=True,
+        )
 
 
 # SSE transport
