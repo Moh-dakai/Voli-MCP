@@ -112,9 +112,9 @@ class HistoricalStore:
 
                 for session_key in SESSIONS.keys():
                     pre_range = daily_range * session_weights[session_key] * rng.uniform(0.35, 0.55)
-                    # Control expansion probability to ~60%
-                    if rng.random() < 0.6:
-                        session_range = pre_range * rng.uniform(1.55, 2.1)
+                    # Control expansion probability to ~65%
+                    if rng.random() < 0.65:
+                        session_range = pre_range * rng.uniform(1.55, 2.0)
                     else:
                         session_range = pre_range * rng.uniform(1.1, 1.45)
 
@@ -124,7 +124,11 @@ class HistoricalStore:
                         if session_key == ev["session"] and ev["currency"] in {pair[:3], pair[3:]}:
                             event_type = ev["event_type"]
                             has_event = 1
-                            session_range *= rng.uniform(1.05, 1.25)
+                            # Recalibrate event-day expansion probability
+                            if rng.random() < 0.55:
+                                session_range = pre_range * rng.uniform(1.5, 1.9)
+                            else:
+                                session_range = pre_range * rng.uniform(1.1, 1.4)
                             break
 
                     records.append(

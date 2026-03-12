@@ -73,8 +73,30 @@ class PatternMatcher:
                 "matched_dates": []
             }
 
-        expansion_count = sum(1 for r in rows if r.session_range_pips > (r.pre_range_pips * 1.5))
+        session_multipliers = {
+            "asian": 1.4,
+            "london": 1.35,
+            "ny": 1.38
+        }
+        expansion_multiplier = session_multipliers.get(session_key, 1.35)
+        expansion_count = sum(
+            1 for r in rows if r.session_range_pips > (r.pre_range_pips * expansion_multiplier)
+        )
         expansion_rate = expansion_count / len(rows)
+
+        # If event-specific sample shows extreme rate, broaden to any event days
+        if event_type and len(rows) >= 80 and expansion_rate > 0.8:
+            rows = store.get_comparable_conditions(
+                pair=self.pair,
+                session=session_key,
+                event_type="ANY",
+                compression_ratio=compression_ratio,
+                tolerance=threshold
+            )
+            expansion_count = sum(
+                1 for r in rows if r.session_range_pips > (r.pre_range_pips * expansion_multiplier)
+            )
+            expansion_rate = expansion_count / len(rows)
         avg_expansion = np.mean([r.session_range_pips - r.pre_range_pips for r in rows])
 
         return {
