@@ -30,8 +30,7 @@ class TwelveDataClient:
             api_key: API key (defaults to env var TWELVE_DATA_API_KEY)
         """
         self.api_key = api_key or os.getenv("TWELVE_DATA_API_KEY")
-        if not self.api_key:
-            raise ValueError("TWELVE_DATA_API_KEY not found in environment")
+        self.enabled = bool(self.api_key)
         
         # Rate limiting
         self.max_requests_per_day = int(os.getenv("MAX_REQUESTS_PER_DAY", "800"))
@@ -74,6 +73,8 @@ class TwelveDataClient:
         Returns:
             JSON response data
         """
+        if not self.enabled:
+            raise Exception("Twelve Data client disabled (missing API key)")
         await self._check_rate_limit()
         
         params["apikey"] = self.api_key
@@ -237,7 +238,36 @@ class TwelveDataClient:
             "resets_at": self.daily_reset_time.isoformat(),
             "percentage_used": round(
                 (self.daily_request_count / self.max_requests_per_day) * 100, 1
-            )
+            ),
+            "enabled": self.enabled
+        }
+
+
+class NullDataClient:
+    """Fallback client when no API key is available."""
+
+    enabled = False
+
+    async def get_intraday_data(self, *args, **kwargs) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    async def get_time_series(self, *args, **kwargs) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    async def get_daily_data(self, *args, **kwargs) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    async def get_historical_sessions(self, *args, **kwargs) -> pd.DataFrame:
+        return pd.DataFrame()
+
+    def get_rate_limit_status(self) -> Dict[str, Any]:
+        return {
+            "requests_today": 0,
+            "daily_limit": 0,
+            "remaining": 0,
+            "resets_at": None,
+            "percentage_used": 0,
+            "enabled": False
         }
 
 
@@ -248,5 +278,10 @@ def get_client() -> TwelveDataClient:
     """Get singleton Twelve Data client instance."""
     global _client_instance
     if _client_instance is None:
-        _client_instance = TwelveDataClient()
+        try:
+            _client_instance = TwelveDataClient()
+            if not _client_instance.enabled:
+                _client_instance = NullDataClient()
+        except Exception:
+            _client_instance = NullDataClient()
     return _client_instance

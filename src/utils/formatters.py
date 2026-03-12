@@ -181,43 +181,59 @@ def classify_volatility(expected_pips: float, pair: str, session: str) -> str:
 
 
 def generate_agent_guidance(
-    volatility_level: str,
-    expansion_rate: float,
-    is_compressed: bool,
-    has_event: bool
+    volatility_expectation: str,
+    confidence: float,
+    has_high_impact_event: bool,
+    session_range_vs_avg: float
 ) -> str:
     """
     Generate trading strategy guidance based on conditions.
     
     Args:
-        volatility_level: "Low", "Medium", or "High"
-        expansion_rate: Historical expansion rate (0-1)
-        is_compressed: Whether pre-session range is compressed
-        has_event: Whether major economic event is scheduled
+        volatility_expectation: "Low", "Medium", "High", or "None"
+        confidence: Confidence score (0-1)
+        has_high_impact_event: Whether high-impact event is scheduled
+        session_range_vs_avg: Current pre-session vs 30-day avg ratio
         
     Returns:
         Strategy guidance string
     """
-    if volatility_level == "High" and expansion_rate > 0.6 and is_compressed:
-        return "Avoid mean-reversion strategies; favor breakout or momentum confirmation setups."
+    # Treat "Medium" as "Normal" for guidance logic
+    volatility_key = "Normal" if volatility_expectation == "Medium" else volatility_expectation
     
-    elif volatility_level == "High" and has_event:
-        return "High-impact event expected; consider wider stops and wait for initial volatility to settle before entering."
-    
-    elif volatility_level == "Low" and expansion_rate < 0.4:
-        return "Range-bound conditions likely; favor mean-reversion strategies with tight stops."
-    
-    elif is_compressed and expansion_rate > 0.5:
-        return "Compressed range suggests coiled spring; monitor for breakout in direction of higher timeframe trend."
-    
-    elif volatility_level == "Medium":
-        return "Moderate volatility expected; standard risk management applies. Watch for direction confirmation."
-    
-    elif has_event and expansion_rate < 0.5:
-        return "Event scheduled but historical expansion limited; consider reduced position sizing and avoid early entries."
-    
+    if volatility_key == "High" and confidence > 0.60:
+        if has_high_impact_event:
+            return (
+                "High-impact event imminent. Avoid pre-positioning; "
+                "wait for post-release momentum confirmation before entry."
+            )
+        return (
+            "Session expansion likely based on compression + historical pattern. "
+            "Favor breakout setups with wider stops."
+        )
+    elif volatility_key == "Low" and confidence > 0.60:
+        return (
+            "Compression regime expected. Mean-reversion and range-bound strategies "
+            "favored; keep targets tight."
+        )
+    elif volatility_key == "Normal":
+        return (
+            "Standard session volatility expected. No directional bias from volatility "
+            "structure; apply your base strategy."
+        )
     else:
-        return "Mixed signals; wait for clearer price action confirmation before entering positions."
+        if confidence < 0.35:
+            return "Insufficient signal confluence. Reduce position size and wait for session open confirmation."
+        # If confidence is higher but volatility is unclear, avoid the generic fallback
+        if session_range_vs_avg < 0.8:
+            return (
+                "Pre-session compression present but signal strength is mixed. "
+                "Favor smaller size and wait for early-session confirmation."
+            )
+        return (
+            "Signal alignment is moderate without a clear volatility bias. "
+            "Wait for early-session structure before committing size."
+        )
 
 
 def format_session_output(
@@ -253,11 +269,15 @@ def format_session_output(
         volatility_level = classify_volatility(expected_deviation_pips, pair, session)
     
     if agent_guidance is None:
+        # Infer event/compression from drivers if not explicitly passed
+        has_event = "event" in " ".join(drivers).lower() or "speech" in " ".join(drivers).lower()
+        is_compressed = "compressed" in " ".join(drivers).lower()
+        session_range_vs_avg = 0.7 if is_compressed else 1.0
         agent_guidance = generate_agent_guidance(
-            volatility_level=volatility_level,
-            expansion_rate=historical_context.get("expansion_rate", 0.5),
-            is_compressed="compressed" in " ".join(drivers).lower(),
-            has_event="event" in " ".join(drivers).lower() or "speech" in " ".join(drivers).lower()
+            volatility_expectation=volatility_level,
+            confidence=confidence,
+            has_high_impact_event=has_event,
+            session_range_vs_avg=session_range_vs_avg
         )
     
     return {

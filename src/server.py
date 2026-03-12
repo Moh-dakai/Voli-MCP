@@ -46,7 +46,7 @@ async def list_tools() -> list[Tool]:
                     },
                     "target_session": {
                         "type": "string",
-                        "description": "Trading session to analyze. Use 'asian' for Asian session (00:00-09:00 UTC), 'london' for London session (08:00-16:00 UTC), 'ny' for New York session (13:00-21:00 UTC), or 'auto' to automatically detect the current or next upcoming session.",
+                        "description": "Trading session to analyze. Use 'asian' for Asian session (00:00-08:00 UTC), 'london' for London session (07:00-16:00 UTC), 'ny' for New York session (12:00-21:00 UTC), or 'auto' to automatically detect the current or next upcoming session.",
                         "enum": ["asian", "london", "ny", "auto"],
                         "default": "auto"
                     }
@@ -157,20 +157,7 @@ async def handle_sse(request: Request) -> Response:
 
 
 async def handle_messages(request: Request) -> Response:
-    """
-    ASGI-to-Starlette adapter for sse.handle_post_message.
-
-    Problem: sse.handle_post_message(scope, receive, send) is a raw ASGI callable.
-    Starlette Route endpoints receive a single Request argument and must return a
-    Response. Passing sse.handle_post_message directly as an endpoint causes:
-        TypeError: handle_post_message() missing 2 required positional arguments:
-        'receive' and 'send'
-
-    Solution: intercept the raw ASGI send() calls that handle_post_message makes
-    internally, capture the status/headers/body it tries to send, then return those
-    as a proper Starlette Response so Starlette can send it through its normal flow.
-    This avoids double-sending and keeps everything compatible.
-    """
+    
     captured_status = 202
     captured_headers: dict[str, str] = {}
     captured_body = b""

@@ -63,6 +63,36 @@ class RangeCalculator:
         """
         pre_session_df = self._filter_pre_session(df, session_start_time, minutes_before)
         return self.calculate_range_pips(pre_session_df)
+
+    def calculate_pre_session_range_for_date(
+        self,
+        df: pd.DataFrame,
+        session_start_time: time,
+        minutes_before: int,
+        target_date: datetime.date
+    ) -> float:
+        """
+        Calculate pre-session range for a specific date.
+        """
+        pre_session_df = self._filter_pre_session_for_date(
+            df, session_start_time, minutes_before, target_date
+        )
+        return self.calculate_range_pips(pre_session_df)
+
+    def calculate_session_range_for_date(
+        self,
+        df: pd.DataFrame,
+        session_start_time: time,
+        session_end_time: time,
+        target_date: datetime.date
+    ) -> float:
+        """
+        Calculate session range for a specific date.
+        """
+        session_df = self._filter_session_for_date(
+            df, session_start_time, session_end_time, target_date
+        )
+        return self.calculate_range_pips(session_df)
     
     def calculate_session_range(
         self,
@@ -215,15 +245,40 @@ class RangeCalculator:
             return pd.DataFrame()
         
         recent_date = dates[-1]
-        
+        last_ts = df.index[-1]
+
         session_start_dt = datetime.combine(recent_date, session_start)
-        
         # Preserve timezone awareness
         if df.index.tz is not None:
             session_start_dt = session_start_dt.replace(tzinfo=df.index.tz)
-        
+
+        # If we don't have enough data for today's pre-session window, roll back one day
+        if last_ts < session_start_dt and last_ts.time() < session_start:
+            session_start_dt = session_start_dt - timedelta(days=1)
+
         window_start_dt = session_start_dt - timedelta(minutes=minutes_before)
-        
+
+        mask = (df.index >= window_start_dt) & (df.index < session_start_dt)
+        return df[mask]
+
+    def _filter_pre_session_for_date(
+        self,
+        df: pd.DataFrame,
+        session_start: time,
+        minutes_before: int,
+        target_date: datetime.date
+    ) -> pd.DataFrame:
+        """
+        Filter DataFrame to pre-session window for a specific date.
+        """
+        if df.empty:
+            return pd.DataFrame()
+
+        session_start_dt = datetime.combine(target_date, session_start)
+        if df.index.tz is not None:
+            session_start_dt = session_start_dt.replace(tzinfo=df.index.tz)
+        window_start_dt = session_start_dt - timedelta(minutes=minutes_before)
+
         mask = (df.index >= window_start_dt) & (df.index < session_start_dt)
         return df[mask]
     
@@ -252,6 +307,30 @@ class RangeCalculator:
         else:  # Crosses midnight
             mask = (times >= session_start) | (times < session_end)
         
+        return df[mask]
+
+    def _filter_session_for_date(
+        self,
+        df: pd.DataFrame,
+        session_start: time,
+        session_end: time,
+        target_date: datetime.date
+    ) -> pd.DataFrame:
+        """
+        Filter DataFrame to session window for a specific date.
+        """
+        if df.empty:
+            return pd.DataFrame()
+
+        session_start_dt = datetime.combine(target_date, session_start)
+        session_end_dt = datetime.combine(target_date, session_end)
+        if session_end_dt < session_start_dt:
+            session_end_dt += timedelta(days=1)
+        if df.index.tz is not None:
+            session_start_dt = session_start_dt.replace(tzinfo=df.index.tz)
+            session_end_dt = session_end_dt.replace(tzinfo=df.index.tz)
+
+        mask = (df.index >= session_start_dt) & (df.index < session_end_dt)
         return df[mask]
     
     def calculate_atr(self, df: pd.DataFrame, period: int = 14) -> float:

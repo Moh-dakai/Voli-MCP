@@ -13,23 +13,23 @@ SESSIONS = {
     "asian": {
         "name": "Asian Session",
         "start": time(0, 0),      # 00:00 UTC
-        "end": time(9, 0),        # 09:00 UTC
+        "end": time(8, 0),        # 08:00 UTC
         "major_centers": ["Tokyo", "Singapore", "Hong Kong"],
         "peak_hours": (time(1, 0), time(6, 0)),  # Tokyo open to mid-session
     },
     "london": {
         "name": "London Session",
-        "start": time(8, 0),      # 08:00 UTC
+        "start": time(7, 0),      # 07:00 UTC
         "end": time(16, 0),       # 16:00 UTC
         "major_centers": ["London", "Frankfurt", "Paris"],
-        "peak_hours": (time(8, 0), time(12, 0)),  # London open to NY overlap
+        "peak_hours": (time(7, 0), time(12, 0)),  # London open to NY overlap
     },
     "ny": {
         "name": "New York Session",
-        "start": time(13, 0),     # 13:00 UTC
+        "start": time(12, 0),     # 12:00 UTC
         "end": time(21, 0),       # 21:00 UTC
         "major_centers": ["New York", "Chicago", "Toronto"],
-        "peak_hours": (time(13, 0), time(17, 0)),  # NY open to London close
+        "peak_hours": (time(12, 0), time(17, 0)),  # NY open to London close
     }
 }
 
@@ -37,15 +37,15 @@ SESSIONS = {
 OVERLAPS = {
     "london_ny": {
         "name": "London-NY Overlap",
-        "start": time(13, 0),     # 13:00 UTC
+        "start": time(12, 0),     # 12:00 UTC
         "end": time(16, 0),       # 16:00 UTC
         "sessions": ["london", "ny"],
         "volatility_multiplier": 1.8
     },
     "asian_london": {
         "name": "Asian-London Overlap",
-        "start": time(8, 0),      # 08:00 UTC
-        "end": time(9, 0),        # 09:00 UTC
+        "start": time(7, 0),      # 07:00 UTC
+        "end": time(8, 0),        # 08:00 UTC
         "sessions": ["asian", "london"],
         "volatility_multiplier": 1.3
     }
