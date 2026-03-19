@@ -3,9 +3,9 @@
     "pair": "EURUSD",
     "session": "london",
     "pre_range_pips": 15.4,
-    "avg_pre_range_pips": 15.0,
-    "avg_session_range_pips": 24.3,
-    "timestamp": "2026-03-12T18:18:34.639895+00:00"
+    "avg_pre_range_pips": 16.4,
+    "avg_session_range_pips": 33.8,
+    "timestamp": "2026-03-19T09:34:29.317831+00:00"
   },
   "GBPUSD::ny": {
     "pair": "GBPUSD",
@@ -22,5 +22,13 @@
     "avg_pre_range_pips": 11.0,
     "avg_session_range_pips": 17.9,
     "timestamp": "2026-03-12T18:18:38.350302+00:00"
+  },
+  "EURGBP::london": {
+    "pair": "EURGBP",
+    "session": "london",
+    "pre_range_pips": 13.5,
+    "avg_pre_range_pips": 13.8,
+    "avg_session_range_pips": 22.2,
+    "timestamp": "2026-03-18T10:53:23.567838+00:00"
   }
 }
