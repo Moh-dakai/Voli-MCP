@@ -440,16 +440,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ##  Acknowledgments
 
-- [Twelve Data](https://twelvedata.com/) for market data API
-- [Model Context Protocol](https://modelcontextprotocol.io/) for the protocol specification
-- [Anthropic](https://www.anthropic.com/) for Claude Desktop integration
+- ctxprotocol
 
 ##  Support
 
-- **Issues**: [GitHub Issues](https://github.com/Ash-Cyber-and-Computer-Organization/Voli-MCP/issues)
+- **Issues**: [GitHub Issues](https://github.com/Contractor-x/Voli-MCP/issues)
 <!--- **Discussions**: [GitHub Discussions](https://github.com/your-username/voli-mcp/discussions) -->
 - **Documentation**: See `docs/` directory for detailed guides
 
 ---
 
-**Happy Trading!**
